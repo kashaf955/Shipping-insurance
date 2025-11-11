@@ -1,5 +1,9 @@
 import express from "express";
-import { getCheckout, addShippingInsuranceFee } from "../utils/bigCommerceApi.js";
+import {
+  getCheckout,
+  addShippingInsuranceFee,
+  removeShippingInsuranceFee,
+} from "../utils/bigCommerceApi.js";
 
 const router = express.Router();
 
@@ -10,7 +14,7 @@ router.get("/:checkoutId", async (req, res, next) => {
     const checkoutData = await getCheckout(checkoutId);
     res.json({
       success: true,
-      data: checkoutData
+      data: checkoutData,
     });
   } catch (error) {
     next(error);
@@ -22,18 +26,33 @@ router.post("/:checkoutId/fee", async (req, res, next) => {
   try {
     const { checkoutId } = req.params;
     const { subtotal } = req.body;
+    const subtotalValue = Number(subtotal);
 
-    if (!subtotal) {
+    if (!Number.isFinite(subtotalValue)) {
       return res.status(400).json({
         success: false,
-        error: "Subtotal is required"
+        error: "A numeric subtotal is required",
       });
     }
 
-    const feeResult = await addShippingInsuranceFee(checkoutId, subtotal);
+    const feeResult = await addShippingInsuranceFee(checkoutId, subtotalValue);
     res.json({
       success: true,
-      data: feeResult
+      data: feeResult,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Remove shipping insurance fee
+router.delete("/:checkoutId/fee", async (req, res, next) => {
+  try {
+    const { checkoutId } = req.params;
+    const removalResult = await removeShippingInsuranceFee(checkoutId);
+    res.json({
+      success: true,
+      data: removalResult,
     });
   } catch (error) {
     next(error);
@@ -43,7 +62,8 @@ router.post("/:checkoutId/fee", async (req, res, next) => {
 // Test endpoint (combines get checkout and add fee)
 router.post("/test", async (req, res, next) => {
   try {
-    const checkoutId = req.body.checkoutId || "52537871-c507-4f11-a6bc-87da398d2c34";
+    const checkoutId =
+      req.body.checkoutId || "52537871-c507-4f11-a6bc-87da398d2c34";
     // const subtotal = 100;
 
     console.log("🚀 Starting BigCommerce API test...");
@@ -61,7 +81,7 @@ router.post("/test", async (req, res, next) => {
     res.json({
       success: true,
       checkout: checkoutData,
-      fee: feeResult
+      fee: feeResult,
     });
   } catch (error) {
     console.error("❌ API test failed:", error.message);
@@ -70,4 +90,3 @@ router.post("/test", async (req, res, next) => {
 });
 
 export default router;
-
