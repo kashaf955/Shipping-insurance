@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import cors from "cors";
 import checkoutRoutes from "./routes/checkout.js";
 
 dotenv.config();
@@ -8,6 +9,19 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  : null;
+
+app.use(
+  cors({
+    origin: allowedOrigins && allowedOrigins.length > 0 ? allowedOrigins : "*",
+    methods: ["GET", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -27,8 +41,8 @@ app.get("/", (req, res) => {
       health: "/health",
       getCheckout: "GET /api/checkout/:checkoutId",
       addInsuranceFee: "POST /api/checkout/:checkoutId/fee",
-      test: "POST /api/checkout/test"
-    }
+      test: "POST /api/checkout/test",
+    },
   });
 });
 
@@ -37,7 +51,7 @@ app.use((err, req, res, next) => {
   console.error("❌ Error:", err.message);
   res.status(err.status || 500).json({
     success: false,
-    error: err.message
+    error: err.message,
   });
 });
 
@@ -45,11 +59,10 @@ app.use((err, req, res, next) => {
 app.use((req, res) => {
   res.status(404).json({
     success: false,
-    error: "Route not found"
+    error: "Route not found",
   });
 });
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
-

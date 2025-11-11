@@ -93,3 +93,45 @@ export async function addShippingInsuranceFee(checkoutId, subtotal) {
   }
 }
 
+export async function removeShippingInsuranceFee(checkoutId) {
+  try {
+    const checkout = await getCheckout(checkoutId);
+    const fees = checkout?.data?.fees ?? [];
+    const feeToRemove = fees.find(
+      (fee) =>
+        fee.name?.toLowerCase() === "shipping insurance" ||
+        fee.display_name?.toLowerCase() === "shipping insurance"
+    );
+
+    if (!feeToRemove) {
+      console.log("ℹ️ No shipping insurance fee found to remove");
+      return { removed: false, reason: "not_found" };
+    }
+
+    const response = await fetchWithTimeout(
+      `https://api.bigcommerce.com/stores/${STORE_HASH}/v3/checkouts/${checkoutId}/fees/${feeToRemove.id}`,
+      {
+        method: "DELETE",
+        headers: {
+          "X-Auth-Token": ACCESS_TOKEN,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      },
+      15000
+    );
+
+    if (!response.ok && response.status !== 204) {
+      const errorText = await response.text();
+      throw new Error(
+        `Failed to remove fee: ${response.status} - ${errorText}`
+      );
+    }
+
+    console.log("✅ Shipping insurance fee removed successfully");
+    return { removed: true };
+  } catch (error) {
+    console.error("❌ Error removing fee:", error.message);
+    throw error;
+  }
+}
